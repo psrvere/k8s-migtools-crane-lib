@@ -39,6 +39,9 @@ const (
 	GitHTTPSProxy = "HTTPS_PROXY"
 	GitNoProxy    = "NO_PROXY"
 
+	// S2I Strategy Parameters
+	S2iForcePullParamName = "pull-policy"
+
 	Timeout = 10 * time.Minute
 )
 
@@ -199,10 +202,7 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 				t.Logger.Warnf("Incremental build is not yet supported in the built-in Source-to-Image ClusterBuildStrategy in Shipwright. RFE: %s", IncrementalBuildRFE)
 			}
 
-			// process force pull field
-			if bc.Spec.Strategy.SourceStrategy.ForcePull {
-				t.Logger.Warnf("ForcePull flag is not yet supported in the built-in Source-to-Image ClusterBuildStrategy in Shipwright. RFE: %s", ForcePullFlagS2iRFE)
-			}
+			t.processSourceStrategyForcePull(&bc, b)
 
 			// process volumes
 			if len(bc.Spec.Strategy.SourceStrategy.Volumes) > 0 {
@@ -885,6 +885,20 @@ func (t *ConvertOptions) processBuildArgs(bc buildv1.BuildConfig, b *shipwrightv
 			Values: values,
 		}
 		b.Spec.ParamValues = append(b.Spec.ParamValues, buildArgsParam)
+	}
+}
+
+func (t *ConvertOptions) processSourceStrategyForcePull(bc *buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
+	if bc.Spec.Strategy.SourceStrategy.ForcePull {
+		t.Logger.Infof("Mapping ForcePull flag to pull-policy param for BuildConfig %s", bc.Name)
+		pullPolicyValue := "always"
+		pullPolicyParam := shipwrightv1beta1.ParamValue{
+			Name: S2iForcePullParamName,
+			SingleValue: &shipwrightv1beta1.SingleValue{
+				Value: &pullPolicyValue,
+			},
+		}
+		b.Spec.ParamValues = append(b.Spec.ParamValues, pullPolicyParam)
 	}
 }
 
