@@ -40,7 +40,8 @@ const (
 	GitNoProxy    = "NO_PROXY"
 
 	// S2I Strategy Parameters
-	S2iForcePullParamName = "pull-policy"
+	S2iForcePullParamName    = "pull-policy"
+	S2iIncrementalParamName  = "incremental"
 
 	Timeout = 10 * time.Minute
 )
@@ -197,10 +198,7 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 				t.Logger.Warnf("Custom scripts are not yet supported in the built-in Source-to-Image ClusterBuildStrategy in Shipwright. RFE: %s", CustomScriptsRFE)
 			}
 
-			// process incremental build
-			if bc.Spec.Strategy.SourceStrategy.Incremental != nil {
-				t.Logger.Warnf("Incremental build is not yet supported in the built-in Source-to-Image ClusterBuildStrategy in Shipwright. RFE: %s", IncrementalBuildRFE)
-			}
+			t.processSourceStrategyIncremental(&bc, b)
 
 			t.processSourceStrategyForcePull(&bc, b)
 
@@ -885,6 +883,20 @@ func (t *ConvertOptions) processBuildArgs(bc buildv1.BuildConfig, b *shipwrightv
 			Values: values,
 		}
 		b.Spec.ParamValues = append(b.Spec.ParamValues, buildArgsParam)
+	}
+}
+
+func (t *ConvertOptions) processSourceStrategyIncremental(bc *buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
+	if bc.Spec.Strategy.SourceStrategy.Incremental != nil && *bc.Spec.Strategy.SourceStrategy.Incremental {
+		t.Logger.Infof("Mapping Incremental flag to incremental param for BuildConfig %s", bc.Name)
+		incrementalValue := "true"
+		incrementalParam := shipwrightv1beta1.ParamValue{
+			Name: S2iIncrementalParamName,
+			SingleValue: &shipwrightv1beta1.SingleValue{
+				Value: &incrementalValue,
+			},
+		}
+		b.Spec.ParamValues = append(b.Spec.ParamValues, incrementalParam)
 	}
 }
 
