@@ -42,6 +42,7 @@ const (
 	// S2I Strategy Parameters
 	S2iForcePullParamName    = "pull-policy"
 	S2iIncrementalParamName  = "incremental"
+	S2iScriptsURLParamName   = "scripts-url"
 
 	Timeout = 10 * time.Minute
 )
@@ -193,10 +194,7 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 				b.Spec.Env = append(b.Spec.Env, bc.Spec.Strategy.SourceStrategy.Env...)
 			}
 
-			// process custom scripts
-			if bc.Spec.Strategy.SourceStrategy.Scripts != "" {
-				t.Logger.Warnf("Custom scripts are not yet supported in the built-in Source-to-Image ClusterBuildStrategy in Shipwright. RFE: %s", CustomScriptsRFE)
-			}
+			t.processSourceStrategyScripts(&bc, b)
 
 			t.processSourceStrategyIncremental(&bc, b)
 
@@ -883,6 +881,20 @@ func (t *ConvertOptions) processBuildArgs(bc buildv1.BuildConfig, b *shipwrightv
 			Values: values,
 		}
 		b.Spec.ParamValues = append(b.Spec.ParamValues, buildArgsParam)
+	}
+}
+
+func (t *ConvertOptions) processSourceStrategyScripts(bc *buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
+	if bc.Spec.Strategy.SourceStrategy.Scripts != "" {
+		t.Logger.Infof("Mapping Scripts URL to scripts-url param for BuildConfig %s", bc.Name)
+		scriptsURL := bc.Spec.Strategy.SourceStrategy.Scripts
+		scriptsParam := shipwrightv1beta1.ParamValue{
+			Name: S2iScriptsURLParamName,
+			SingleValue: &shipwrightv1beta1.SingleValue{
+				Value: &scriptsURL,
+			},
+		}
+		b.Spec.ParamValues = append(b.Spec.ParamValues, scriptsParam)
 	}
 }
 
