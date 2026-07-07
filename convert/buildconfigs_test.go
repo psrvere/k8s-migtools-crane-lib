@@ -239,6 +239,38 @@ func TestProcessSource(t *testing.T) {
 			},
 			expectedSource: nil,
 		},
+		{
+			name: "Binary source with AsFile set - single file mode should succeed",
+			buildConfig: buildv1.BuildConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-bc-binary-asfile"},
+				Spec: buildv1.BuildConfigSpec{
+					CommonSpec: buildv1.CommonSpec{
+						Source: buildv1.BuildSource{
+							Type:   buildv1.BuildSourceBinary,
+							Binary: &buildv1.BinaryBuildSource{AsFile: "app.tar.gz"},
+						},
+					},
+				},
+			},
+			expectedSource: &shipwrightv1beta1.Source{
+				Type: shipwrightv1beta1.LocalType,
+			},
+		},
+		{
+			name: "Binary source with AsFile empty - archive mode should error",
+			buildConfig: buildv1.BuildConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-bc-binary-archive"},
+				Spec: buildv1.BuildConfigSpec{
+					CommonSpec: buildv1.CommonSpec{
+						Source: buildv1.BuildSource{
+							Type:   buildv1.BuildSourceBinary,
+							Binary: &buildv1.BinaryBuildSource{},
+						},
+					},
+				},
+			},
+			expectedSource: nil,
+		},
 	}
 
 	for _, tt := range tests {

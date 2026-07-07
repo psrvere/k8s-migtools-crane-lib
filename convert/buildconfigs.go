@@ -611,14 +611,12 @@ func (t *ConvertOptions) processSource(bc buildv1.BuildConfig, b *shipwrightv1be
 			source.ContextDir = &bc.Spec.Source.ContextDir
 		}
 
-		// BuildConfig supports both archive and single file as binary source
-		// Shipwright does not support archive
-		if bc.Spec.Source.Binary.AsFile != "" {
-			t.Logger.Errorf("Archive Source is not supported in Shipwright. BuildConfig: %s", bc.Name)
+		if bc.Spec.Source.Binary.AsFile == "" {
+			t.Logger.Errorf("Binary archive source (extracted tar/zip) is not supported in Shipwright. Only single-file binary source (AsFile) is supported. BuildConfig: %s", bc.Name)
 			return
 		}
 
-		t.Logger.Infof("Stream files to build pod using 'shp build upload' command. BuildConfig: %s", bc.Name)
+		t.Logger.Infof("Processing binary source as single file: %s. Stream files to build pod using 'shp build upload' command. BuildConfig: %s", bc.Spec.Source.Binary.AsFile, bc.Name)
 		b.Spec.Source = source
 
 	} else if len(images) != 0 {
