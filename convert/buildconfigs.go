@@ -217,6 +217,10 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
 		}
 
+		if bc.Spec.RunPolicy != "" && bc.Spec.RunPolicy != "Serial" {
+			t.Logger.Warnf("BuildConfig '%s' has runPolicy '%s' which is not supported in Shipwright. The generated Build will not have an equivalent scheduling policy.", bc.Name, bc.Spec.RunPolicy)
+		}
+
 		if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
 			b.Spec.Output.PushSecret = &bc.Spec.Output.PushSecret.Name
 		}
