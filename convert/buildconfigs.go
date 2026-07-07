@@ -217,6 +217,10 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
 		}
 
+		if bc.Spec.PostCommit.Script != "" || len(bc.Spec.PostCommit.Command) > 0 || len(bc.Spec.PostCommit.Args) > 0 {
+			t.Logger.Warnf("BuildConfig '%s' has postCommit hooks configured. Shipwright does not support post-commit hooks; they will be dropped from the generated Build.", bc.Name)
+		}
+
 		if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
 			b.Spec.Output.PushSecret = &bc.Spec.Output.PushSecret.Name
 		}
