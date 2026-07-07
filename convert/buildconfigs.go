@@ -217,6 +217,10 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
 		}
 
+		if bc.Spec.MountTrustedCA != nil && *bc.Spec.MountTrustedCA {
+			t.Logger.Warnf("BuildConfig '%s' has mountTrustedCA enabled. Shipwright does not automatically mount cluster-trusted CAs into the build pod. Builds that depend on custom PKI certificates (e.g., for private registries or HTTPS proxies) may fail with TLS errors. Configure trusted CA mounting in the ClusterBuildStrategy or inject CA bundles via build volumes.", bc.Name)
+		}
+
 		if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
 			b.Spec.Output.PushSecret = &bc.Spec.Output.PushSecret.Name
 		}
