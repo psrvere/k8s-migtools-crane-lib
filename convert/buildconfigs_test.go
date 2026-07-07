@@ -522,20 +522,35 @@ func TestAddRegistries(t *testing.T) {
 
 			assert.Equal(t, tt.expectedParams, len(build.Spec.ParamValues))
 
-			// Verify parameter names
-			paramNames := make(map[string]bool)
+			// Verify parameter names and values
+			paramsByName := make(map[string][]shipwrightv1beta1.SingleValue)
 			for _, param := range build.Spec.ParamValues {
-				paramNames[param.Name] = true
+				paramsByName[param.Name] = param.Values
 			}
 
 			if len(tt.searchRegistries) > 0 {
-				assert.True(t, paramNames["registries-search"])
+				values, ok := paramsByName["registries-search"]
+				assert.True(t, ok)
+				assert.Equal(t, len(tt.searchRegistries), len(values))
+				for i, reg := range tt.searchRegistries {
+					assert.Equal(t, reg, *values[i].Value)
+				}
 			}
 			if len(tt.insecureRegistries) > 0 {
-				assert.True(t, paramNames["registries-insecure"])
+				values, ok := paramsByName["registries-insecure"]
+				assert.True(t, ok)
+				assert.Equal(t, len(tt.insecureRegistries), len(values))
+				for i, reg := range tt.insecureRegistries {
+					assert.Equal(t, reg, *values[i].Value)
+				}
 			}
 			if len(tt.blockRegistries) > 0 {
-				assert.True(t, paramNames["registries-block"])
+				values, ok := paramsByName["registries-block"]
+				assert.True(t, ok)
+				assert.Equal(t, len(tt.blockRegistries), len(values))
+				for i, reg := range tt.blockRegistries {
+					assert.Equal(t, reg, *values[i].Value)
+				}
 			}
 		})
 	}

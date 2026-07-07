@@ -793,7 +793,7 @@ func (t *ConvertOptions) addRegistries(b *shipwrightv1beta1.Build) {
 	}
 
 	if len(t.InsecureRegistries) != 0 {
-		values := parseRegistries(t.BlockRegistries)
+		values := parseRegistries(t.InsecureRegistries)
 
 		insecureRegistryParam := shipwrightv1beta1.ParamValue{
 			Name:   "registries-insecure",
