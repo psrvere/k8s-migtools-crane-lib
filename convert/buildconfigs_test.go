@@ -458,6 +458,40 @@ func TestProcessOutput(t *testing.T) {
 			},
 			expectedImage: "image-registry.openshift-image-registry.svc:5000/test-ns/myimage:latest",
 		},
+		{
+			name: "No output - Output.To is nil",
+			buildConfig: buildv1.BuildConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bc-no-output",
+					Namespace: "default",
+				},
+				Spec: buildv1.BuildConfigSpec{
+					CommonSpec: buildv1.CommonSpec{
+						Output: buildv1.BuildOutput{},
+					},
+				},
+			},
+			expectedImage: "",
+		},
+		{
+			name: "No output with PushSecret set",
+			buildConfig: buildv1.BuildConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bc-no-output-with-secret",
+					Namespace: "default",
+				},
+				Spec: buildv1.BuildConfigSpec{
+					CommonSpec: buildv1.CommonSpec{
+						Output: buildv1.BuildOutput{
+							PushSecret: &corev1.LocalObjectReference{
+								Name: "my-push-secret",
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1967,7 +2001,6 @@ func TestProcessDockerStrategyNoCache(t *testing.T) {
 		})
 	}
 }
-
 
 // Helper function to create string pointers
 func stringPtr(s string) *string {

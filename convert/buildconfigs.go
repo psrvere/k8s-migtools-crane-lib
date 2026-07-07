@@ -217,7 +217,7 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
 		}
 
-		if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
+		if bc.Spec.Output.To != nil && bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
 			b.Spec.Output.PushSecret = &bc.Spec.Output.PushSecret.Name
 		}
 
@@ -761,6 +761,10 @@ func (t *ConvertOptions) processBuildSourceFromField(bc *buildv1.BuildConfig, b 
 }
 
 func (t *ConvertOptions) processOutput(bc buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
+	if bc.Spec.Output.To == nil {
+		t.Logger.Infof("BuildConfig '%s' has no output image configured. Generated Build will have no output.", bc.Name)
+		return
+	}
 	if bc.Spec.Output.To.Kind == "ImageStreamTag" {
 		var namespace string
 		if bc.Spec.Output.To.Namespace != "" {
