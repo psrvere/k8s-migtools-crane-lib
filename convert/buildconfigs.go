@@ -217,6 +217,10 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
 		}
 
+		if bc.Spec.FailedBuildsHistoryLimit != nil {
+			t.Logger.Warnf("BuildConfig '%s' has failedBuildsHistoryLimit set to %d. Shipwright does not support build history limits; this setting will be dropped.", bc.Name, *bc.Spec.FailedBuildsHistoryLimit)
+		}
+
 		if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
 			b.Spec.Output.PushSecret = &bc.Spec.Output.PushSecret.Name
 		}
