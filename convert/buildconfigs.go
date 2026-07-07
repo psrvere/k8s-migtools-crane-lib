@@ -945,6 +945,9 @@ func (t *ConvertOptions) processBuildArgs(bc buildv1.BuildConfig, b *shipwrightv
 		values := []shipwrightv1beta1.SingleValue{}
 
 		for _, buildArg := range bc.Spec.Strategy.DockerStrategy.BuildArgs {
+			if buildArg.ValueFrom != nil {
+				t.Logger.Warnf("BuildConfig '%s' build arg '%s' uses ValueFrom (secretKeyRef/configMapKeyRef/fieldRef) which cannot be resolved at conversion time. The build arg will be set with an empty value. Manually set the correct value in the generated Build.", bc.Name, buildArg.Name)
+			}
 			envNameValue := buildArg.Name + "=" + buildArg.Value
 			value := shipwrightv1beta1.SingleValue{
 				Value: &envNameValue,
