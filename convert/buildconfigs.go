@@ -538,10 +538,11 @@ func (t *ConvertOptions) processSource(bc buildv1.BuildConfig, b *shipwrightv1be
 	images := bc.Spec.Source.Images
 	dockerfile := bc.Spec.Source.Dockerfile
 
-	// Inline dockerfiles are not supported in buildah strategy
-	// And this field is not relevant for source strategy
 	if dockerfile != nil && bc.Spec.Strategy.Type == BuildStrategyDockerType {
 		t.Logger.Errorf("Inline Dockerfile is not supported in buildah strategy. Consider moving it to a separate file.")
+	}
+	if dockerfile != nil && bc.Spec.Strategy.Type == BuildStrategySourceType {
+		t.Logger.Infof("BuildConfig '%s' has an inline Dockerfile set on a Source strategy. Inline Dockerfiles are not used by Source-to-Image and were not migrated. If this was intended for a Docker strategy build, reconfigure the BuildConfig strategy type.", bc.Name)
 	}
 
 	sourceCount := 0
