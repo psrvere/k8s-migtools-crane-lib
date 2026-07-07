@@ -153,6 +153,9 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			// process volumes
 			if len(bc.Spec.Strategy.DockerStrategy.Volumes) > 0 {
 				t.Logger.Warnf("Unlike BuildConfig, Volumes have to be supported in the Buildah Strategy first in Shipwright. Please raise your requirements here: %s", DockerStrategyVolumesRFE)
+				if err := t.processStrategyVolumes(&bc, bc.Spec.Strategy.DockerStrategy.Volumes, b); err != nil {
+					return err
+				}
 			}
 		case BuildStrategySourceType:
 			t.Logger.Infof("Source strategy detected for BuildConfig: %s", bc.Name)
@@ -212,6 +215,9 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			// process volumes
 			if len(bc.Spec.Strategy.SourceStrategy.Volumes) > 0 {
 				t.Logger.Warnf("Unlike BuildConfig, Volumes have to be supported in the Source-to-Image Strategy first in Shipwright. Please raise your requirements here: %s", DockerStrategyVolumesRFE)
+				if err := t.processSourceStrategyVolumes(&bc, b); err != nil {
+					return err
+				}
 			}
 		default:
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
