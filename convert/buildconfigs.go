@@ -217,6 +217,14 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
 		}
 
+		if len(bc.Spec.Triggers) > 0 {
+			triggerTypes := []string{}
+			for _, trigger := range bc.Spec.Triggers {
+				triggerTypes = append(triggerTypes, string(trigger.Type))
+			}
+			t.Logger.Warnf("BuildConfig '%s' has %d trigger(s) [%s] which will be dropped. Shipwright does not have built-in build triggers. To trigger builds after migration, use Tekton Triggers, EventListeners, or create BuildRuns manually/programmatically.", bc.Name, len(bc.Spec.Triggers), strings.Join(triggerTypes, ", "))
+		}
+
 		if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
 			b.Spec.Output.PushSecret = &bc.Spec.Output.PushSecret.Name
 		}
