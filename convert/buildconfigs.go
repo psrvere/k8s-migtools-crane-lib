@@ -225,6 +225,7 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 		t.processOutput(bc, b)
 		t.addRegistries(b)
 		t.writeBuild(b)
+		t.exportReferencedSecrets(bc)
 	}
 
 	return nil
@@ -444,6 +445,76 @@ func (t *ConvertOptions) getServiceAccountName(bc *buildv1.BuildConfig) string {
 		saName = bc.Name
 	}
 	return saName
+}
+
+func (t *ConvertOptions) exportReferencedSecrets(bc buildv1.BuildConfig) {
+	exported := make(map[string]bool)
+
+	if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
+		t.exportSecret(bc.Namespace, bc.Spec.Output.PushSecret.Name, exported)
+	}
+
+	pullSecret := t.getPullSecret(&bc)
+	if pullSecret != nil {
+		t.exportSecret(bc.Namespace, pullSecret.Name, exported)
+	}
+
+	for _, s := range bc.Spec.Source.Secrets {
+		t.exportSecret(bc.Namespace, s.Secret.Name, exported)
+	}
+}
+
+func (t *ConvertOptions) exportSecret(namespace, name string, exported map[string]bool) {
+	if exported[name] {
+		return
+	}
+	exported[name] = true
+
+	secret := &corev1.Secret{}
+	err := t.Client.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, secret)
+	if err != nil {
+		t.Logger.Warnf("Could not read secret '%s' from namespace '%s': %v. You will need to recreate this secret on the destination cluster.", name, namespace, err)
+		return
+	}
+
+	secret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}
+	secret.ObjectMeta = metav1.ObjectMeta{
+		Name:      secret.Name,
+		Namespace: secret.Namespace,
+	}
+	secret.CreationTimestamp = metav1.Now()
+
+	if err := t.writeSecret(secret); err != nil {
+		t.Logger.Errorf("Failed to write secret '%s': %v", name, err)
+		return
+	}
+	t.Logger.Infof("Exported secret '%s' from namespace '%s' to output directory", name, namespace)
+}
+
+func (t *ConvertOptions) writeSecret(secret *corev1.Secret) error {
+	targetDir := filepath.Join(t.ExportDir, "builds", secret.Namespace)
+	err := os.MkdirAll(targetDir, 0700)
+	switch {
+	case os.IsExist(err):
+	case err != nil:
+		return err
+	}
+
+	fileName := strings.Join([]string{"Secret", "v1", secret.Namespace, secret.Name}, "_") + ".yaml"
+	path := filepath.Join(targetDir, fileName)
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	objBytes, err := yaml.Marshal(secret)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(objBytes)
+	return err
 }
 
 func (t *ConvertOptions) writeServiceAccount(sa *corev1.ServiceAccount) error {
