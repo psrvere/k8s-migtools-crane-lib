@@ -217,6 +217,10 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 			fmt.Println("Strategy type", bc.Spec.Strategy.Type, "is unknown for BuildConfig", bc.Name)
 		}
 
+		// spec.revision (*SourceRevision) is intentionally not migrated — it contains
+		// runtime state (git commit, author, message) set by the build controller, not
+		// user configuration. It would be stale after migration.
+
 		if bc.Spec.Output.PushSecret != nil && bc.Spec.Output.PushSecret.Name != "" {
 			b.Spec.Output.PushSecret = &bc.Spec.Output.PushSecret.Name
 		}
