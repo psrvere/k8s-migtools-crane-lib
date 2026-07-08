@@ -220,6 +220,8 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 		t.processOutput(bc, b)
 		t.addRegistries(b)
 		t.writeBuild(b)
+
+		t.generateBuildRunTemplate(bc, b)
 	}
 
 	return nil
@@ -864,6 +866,75 @@ func (t *ConvertOptions) writeBuild(b *shipwrightv1beta1.Build) error {
 		return err
 	}
 
+	return nil
+}
+
+func (t *ConvertOptions) generateBuildRunTemplate(bc buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
+	hasResources := len(bc.Spec.Resources.Requests) > 0 || len(bc.Spec.Resources.Limits) > 0
+	hasNodeSelector := len(bc.Spec.NodeSelector) > 0
+	hasServiceAccount := bc.Spec.ServiceAccount != ""
+
+	if !hasResources && !hasNodeSelector && !hasServiceAccount {
+		return
+	}
+
+	br := &shipwrightv1beta1.BuildRun{}
+	br.Name = bc.Name + "-buildrun"
+	br.Kind = "BuildRun"
+	br.APIVersion = "shipwright.io/v1beta1"
+	br.Namespace = bc.Namespace
+	br.Spec.Build.Name = &b.Name
+
+	if hasResources {
+		t.Logger.Warnf("BuildConfig '%s' has resource requirements (Requests: %v, Limits: %v). Shipwright BuildRun does not yet support per-step resource overrides in this API version. Resource requirements will be dropped. Set resources directly in the ClusterBuildStrategy step definition.", bc.Name, bc.Spec.Resources.Requests, bc.Spec.Resources.Limits)
+	}
+
+	if hasNodeSelector {
+		br.Spec.NodeSelector = map[string]string(bc.Spec.NodeSelector)
+		t.Logger.Infof("Mapped nodeSelector from BuildConfig '%s' to BuildRun template", bc.Name)
+	}
+
+	if hasServiceAccount {
+		br.Spec.ServiceAccount = &bc.Spec.ServiceAccount
+		t.Logger.Infof("Mapped serviceAccount '%s' from BuildConfig '%s' to BuildRun template", bc.Spec.ServiceAccount, bc.Name)
+	}
+
+	t.writeBuildRun(br)
+}
+
+func (t *ConvertOptions) writeBuildRun(br *shipwrightv1beta1.BuildRun) error {
+	targetDir := filepath.Join(t.ExportDir, "builds", t.Namespace)
+	err := os.MkdirAll(targetDir, 0700)
+	switch {
+	case os.IsExist(err):
+	case err != nil:
+		t.Logger.Errorf("error creating the resources directory: %#v", err)
+		return err
+	}
+
+	fileName := strings.Join([]string{br.GroupVersionKind().Kind, br.GroupVersionKind().Group, br.GroupVersionKind().Version, br.Namespace, br.Name}, "_") + ".yaml"
+	path := filepath.Join(targetDir, fileName)
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	objBytes, err := yaml.Marshal(br)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(objBytes)
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+
+	t.Logger.Infof("BuildRun template written to %s", path)
 	return nil
 }
 
