@@ -46,8 +46,27 @@ const (
 	Timeout = 10 * time.Minute
 )
 
+func (t *ConvertOptions) checkShipwrightPrerequisites() {
+	cbsList := shipwrightv1beta1.ClusterBuildStrategyList{}
+	err := t.Client.List(context.TODO(), &cbsList)
+	if err != nil {
+		t.Logger.Warnf("Shipwright Build API not found on the connected cluster. The generated Shipwright Build YAMLs will require Shipwright (and Tekton Pipelines) to be installed before they can be applied. Install the OpenShift Builds operator or Shipwright upstream to proceed with migration.")
+		return
+	}
+	if len(cbsList.Items) == 0 {
+		t.Logger.Warnf("Shipwright is installed but no ClusterBuildStrategies found. The generated Builds reference 'buildah' or 'source-to-image' strategies — ensure these are created before applying the generated resources.")
+		return
+	}
+	strategyNames := []string{}
+	for _, cbs := range cbsList.Items {
+		strategyNames = append(strategyNames, cbs.Name)
+	}
+	t.Logger.Infof("Shipwright detected with %d ClusterBuildStrategy(ies): %s", len(strategyNames), strings.Join(strategyNames, ", "))
+}
+
 func (t *ConvertOptions) convertBuildConfigs() error {
 	t.Logger.Infof("Converting BuildConfigs in namespace: %s", t.Namespace)
+	t.checkShipwrightPrerequisites()
 	bcList := buildv1.BuildConfigList{}
 	err := t.Client.List(context.TODO(), &bcList, client.InNamespace(t.Namespace))
 	if err != nil {
