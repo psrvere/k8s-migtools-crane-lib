@@ -2,6 +2,8 @@ package convert
 
 const (
 	ConfigMapsRFE            = "https://issues.redhat.com/browse/BUILD-1745"
+	ForcePullFlagRFE         = "https://issues.redhat.com/browse/BUILD-1580"
+	SqashFlagRFE             = "https://issues.redhat.com/browse/BUILD-1581"
 	SecretsRFE               = "https://issues.redhat.com/browse/BUILD-1744"
 	DockerStrategyVolumesRFE = "https://issues.redhat.com/browse/BUILD-1747"
 	CustomScriptsRFE         = "https://issues.redhat.com/browse/BUILD-1641"
