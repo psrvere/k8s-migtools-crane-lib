@@ -780,6 +780,15 @@ func (t *ConvertOptions) processOutput(bc buildv1.BuildConfig, b *shipwrightv1be
 	} else {
 		b.Spec.Output.Image = bc.Spec.Output.To.Name
 	}
+
+	if len(bc.Spec.Output.ImageLabels) > 0 {
+		labels := make(map[string]string)
+		for _, il := range bc.Spec.Output.ImageLabels {
+			labels[il.Name] = il.Value
+		}
+		b.Spec.Output.Labels = labels
+		t.Logger.Infof("Mapped %d image label(s) to Build output labels for BuildConfig '%s'", len(labels), bc.Name)
+	}
 }
 
 func (t *ConvertOptions) addRegistries(b *shipwrightv1beta1.Build) {
