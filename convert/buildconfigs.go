@@ -926,6 +926,8 @@ func (t *ConvertOptions) writeBuild(b *shipwrightv1beta1.Build) error {
 		return err
 	}
 
+	objBytes = cleanNullFields(objBytes)
+
 	_, err = f.Write(objBytes)
 	if err != nil {
 		return err
@@ -937,6 +939,30 @@ func (t *ConvertOptions) writeBuild(b *shipwrightv1beta1.Build) error {
 	}
 
 	return nil
+}
+
+func cleanNullFields(yamlBytes []byte) []byte {
+	lines := strings.Split(string(yamlBytes), "\n")
+	cleaned := []string{}
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "configMapValue: null" || trimmed == "secretValue: null" {
+			continue
+		}
+		if trimmed == "- configMapValue: null" || trimmed == "- secretValue: null" {
+			nextField := ""
+			if i+1 < len(lines) {
+				nextField = strings.TrimSpace(lines[i+1])
+			}
+			indent := line[:strings.Index(line, "-")]
+			if nextField != "" {
+				lines[i+1] = indent + "- " + nextField
+			}
+			continue
+		}
+		cleaned = append(cleaned, line)
+	}
+	return []byte(strings.Join(cleaned, "\n"))
 }
 
 func (t *ConvertOptions) processBuildArgs(bc buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
