@@ -81,6 +81,20 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 		b.Namespace = bc.Namespace
 		b.CreationTimestamp = metav1.NewTime(time.Now())
 
+		if len(bc.Labels) > 0 {
+			filtered := make(map[string]string)
+			for k, v := range bc.Labels {
+				if strings.HasPrefix(k, "openshift.io/build") || k == "buildconfig" {
+					continue
+				}
+				filtered[k] = v
+			}
+			if len(filtered) > 0 {
+				b.Labels = filtered
+				t.Logger.Infof("Copied %d label(s) from BuildConfig '%s' to generated Build (filtered OpenShift-internal labels)", len(filtered), bc.Name)
+			}
+		}
+
 		switch strategyType := bc.Spec.Strategy.Type; strategyType {
 		case BuildStrategyDockerType:
 			t.Logger.Infof("Docker strategy detected")
