@@ -81,6 +81,25 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 		b.Namespace = bc.Namespace
 		b.CreationTimestamp = metav1.NewTime(time.Now())
 
+		if len(bc.Annotations) > 0 {
+			filtered := make(map[string]string)
+			for k, v := range bc.Annotations {
+				if strings.HasPrefix(k, "openshift.io/build") ||
+					strings.HasPrefix(k, "openshift.io/jenkins") ||
+					strings.HasPrefix(k, "build.openshift.io/") ||
+					strings.HasPrefix(k, "kubernetes.io/") ||
+					k == "kubectl.kubernetes.io/last-applied-configuration" ||
+					k == "openshift.io/build-config.name" {
+					continue
+				}
+				filtered[k] = v
+			}
+			if len(filtered) > 0 {
+				b.Annotations = filtered
+				t.Logger.Infof("Copied %d annotation(s) from BuildConfig '%s' to generated Build (filtered OpenShift/Kubernetes internal annotations)", len(filtered), bc.Name)
+			}
+		}
+
 		switch strategyType := bc.Spec.Strategy.Type; strategyType {
 		case BuildStrategyDockerType:
 			t.Logger.Infof("Docker strategy detected")
