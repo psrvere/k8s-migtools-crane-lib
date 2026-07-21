@@ -943,8 +943,9 @@ func (t *ConvertOptions) writeBuild(b *shipwrightv1beta1.Build) error {
 
 func (t *ConvertOptions) generateBuildRunTemplate(bc buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
 	hasResources := len(bc.Spec.Resources.Requests) > 0 || len(bc.Spec.Resources.Limits) > 0
+	hasNodeSelector := len(bc.Spec.NodeSelector) > 0
 
-	if !hasResources {
+	if !hasResources && !hasNodeSelector {
 		return
 	}
 
@@ -957,6 +958,11 @@ func (t *ConvertOptions) generateBuildRunTemplate(bc buildv1.BuildConfig, b *shi
 
 	if hasResources {
 		t.Logger.Warnf("BuildConfig '%s' has resource requirements (Requests: %v, Limits: %v). Shipwright BuildRun does not yet support per-step resource overrides in this API version. Resource requirements will be dropped. Set resources directly in the ClusterBuildStrategy step definition.", bc.Name, bc.Spec.Resources.Requests, bc.Spec.Resources.Limits)
+	}
+
+	if hasNodeSelector {
+		br.Spec.NodeSelector = map[string]string(bc.Spec.NodeSelector)
+		t.Logger.Infof("Mapped nodeSelector from BuildConfig '%s' to BuildRun template", bc.Name)
 	}
 
 	if err := t.writeBuildRun(br); err != nil {
@@ -1034,7 +1040,6 @@ func (t *ConvertOptions) processDockerStrategyNoCache(bc *buildv1.BuildConfig, b
 		b.Spec.ParamValues = append(b.Spec.ParamValues, noCacheParam)
 	}
 }
-
 
 func getBuildFilePath(b shipwrightv1beta1.Build) string {
 	return strings.Join([]string{b.GroupVersionKind().Kind, b.GroupVersionKind().Group, b.GroupVersionKind().Version, b.Namespace, b.Name}, "_") + ".yaml"
