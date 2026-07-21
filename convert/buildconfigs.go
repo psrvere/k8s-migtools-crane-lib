@@ -944,8 +944,9 @@ func (t *ConvertOptions) writeBuild(b *shipwrightv1beta1.Build) error {
 func (t *ConvertOptions) generateBuildRunTemplate(bc buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
 	hasResources := len(bc.Spec.Resources.Requests) > 0 || len(bc.Spec.Resources.Limits) > 0
 	hasNodeSelector := len(bc.Spec.NodeSelector) > 0
+	hasServiceAccount := bc.Spec.ServiceAccount != ""
 
-	if !hasResources && !hasNodeSelector {
+	if !hasResources && !hasNodeSelector && !hasServiceAccount {
 		return
 	}
 
@@ -963,6 +964,11 @@ func (t *ConvertOptions) generateBuildRunTemplate(bc buildv1.BuildConfig, b *shi
 	if hasNodeSelector {
 		br.Spec.NodeSelector = map[string]string(bc.Spec.NodeSelector)
 		t.Logger.Infof("Mapped nodeSelector from BuildConfig '%s' to BuildRun template", bc.Name)
+	}
+
+	if hasServiceAccount {
+		br.Spec.ServiceAccount = &bc.Spec.ServiceAccount
+		t.Logger.Infof("Mapped serviceAccount '%s' from BuildConfig '%s' to BuildRun template", bc.Spec.ServiceAccount, bc.Name)
 	}
 
 	t.writeBuildRun(br)
