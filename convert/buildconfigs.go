@@ -959,7 +959,9 @@ func (t *ConvertOptions) generateBuildRunTemplate(bc buildv1.BuildConfig, b *shi
 		t.Logger.Warnf("BuildConfig '%s' has resource requirements (Requests: %v, Limits: %v). Shipwright BuildRun does not yet support per-step resource overrides in this API version. Resource requirements will be dropped. Set resources directly in the ClusterBuildStrategy step definition.", bc.Name, bc.Spec.Resources.Requests, bc.Spec.Resources.Limits)
 	}
 
-	t.writeBuildRun(br)
+	if err := t.writeBuildRun(br); err != nil {
+		t.Logger.Errorf("error writing BuildRun template for BuildConfig '%s': %v", bc.Name, err)
+	}
 }
 
 func (t *ConvertOptions) writeBuildRun(br *shipwrightv1beta1.BuildRun) error {
