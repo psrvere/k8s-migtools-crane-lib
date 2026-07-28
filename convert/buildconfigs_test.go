@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
 	shipwrightv1beta1 "github.com/shipwright-io/build/pkg/apis/build/v1beta1"
 	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
@@ -2146,4 +2148,70 @@ func TestProcessDockerStrategySquash(t *testing.T) {
 // Helper function to create string pointers
 func stringPtr(s string) *string {
 	return &s
+}
+
+func TestProcessSourceInlineDockerfileWarning(t *testing.T) {
+	tests := []struct {
+		name          string
+		strategyType  buildv1.BuildStrategyType
+		dockerfile    *string
+		expectedLevel logrus.Level
+		expectWarn    bool
+	}{
+		{
+			name:          "Source strategy with inline Dockerfile warns",
+			strategyType:  buildv1.SourceBuildStrategyType,
+			dockerfile:    stringPtr("FROM scratch"),
+			expectedLevel: logrus.WarnLevel,
+			expectWarn:    true,
+		},
+		{
+			name:         "Source strategy without inline Dockerfile does not warn",
+			strategyType: buildv1.SourceBuildStrategyType,
+			dockerfile:   nil,
+			expectWarn:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger, hook := logrustest.NewNullLogger()
+			co := &ConvertOptions{
+				Logger: logger,
+			}
+
+			bc := buildv1.BuildConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-bc"},
+				Spec: buildv1.BuildConfigSpec{
+					CommonSpec: buildv1.CommonSpec{
+						Source: buildv1.BuildSource{
+							Dockerfile: tt.dockerfile,
+							Git:        &buildv1.GitBuildSource{URI: "https://example.com/repo.git"},
+						},
+						Strategy: buildv1.BuildStrategy{
+							Type: tt.strategyType,
+						},
+					},
+				},
+			}
+
+			build := &shipwrightv1beta1.Build{Spec: shipwrightv1beta1.BuildSpec{}}
+			co.processSource(bc, build)
+
+			found := false
+			for _, entry := range hook.AllEntries() {
+				if entry.Level == logrus.WarnLevel &&
+					strings.Contains(entry.Message, "inline Dockerfile") &&
+					strings.Contains(entry.Message, "Source strategy") {
+					found = true
+				}
+			}
+
+			if tt.expectWarn {
+				assert.True(t, found, "expected inline-Dockerfile-on-Source warning to be logged")
+			} else {
+				assert.False(t, found, "expected no inline-Dockerfile warning")
+			}
+		})
+	}
 }
