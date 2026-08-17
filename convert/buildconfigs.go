@@ -789,7 +789,7 @@ func (t *ConvertOptions) addRegistries(b *shipwrightv1beta1.Build) {
 	}
 
 	if len(t.InsecureRegistries) != 0 {
-		values := parseRegistries(t.BlockRegistries)
+		values := parseRegistries(t.InsecureRegistries)
 
 		insecureRegistryParam := shipwrightv1beta1.ParamValue{
 			Name:   "registries-insecure",
@@ -802,12 +802,12 @@ func (t *ConvertOptions) addRegistries(b *shipwrightv1beta1.Build) {
 	if len(t.BlockRegistries) != 0 {
 		values := parseRegistries(t.BlockRegistries)
 
-		insecureRegistryParam := shipwrightv1beta1.ParamValue{
+		blockRegistryParam := shipwrightv1beta1.ParamValue{
 			Name:   "registries-block",
 			Values: values,
 		}
 
-		b.Spec.ParamValues = append(b.Spec.ParamValues, insecureRegistryParam)
+		b.Spec.ParamValues = append(b.Spec.ParamValues, blockRegistryParam)
 	}
 }
 

@@ -522,20 +522,25 @@ func TestAddRegistries(t *testing.T) {
 
 			assert.Equal(t, tt.expectedParams, len(build.Spec.ParamValues))
 
-			// Verify parameter names
-			paramNames := make(map[string]bool)
+			// Verify parameter names AND values — the values check guards
+			// against wiring a param to the wrong registry list (BUILD-2272)
+			paramValues := make(map[string][]string)
 			for _, param := range build.Spec.ParamValues {
-				paramNames[param.Name] = true
+				values := []string{}
+				for _, v := range param.Values {
+					values = append(values, *v.Value)
+				}
+				paramValues[param.Name] = values
 			}
 
 			if len(tt.searchRegistries) > 0 {
-				assert.True(t, paramNames["registries-search"])
+				assert.Equal(t, tt.searchRegistries, paramValues["registries-search"])
 			}
 			if len(tt.insecureRegistries) > 0 {
-				assert.True(t, paramNames["registries-insecure"])
+				assert.Equal(t, tt.insecureRegistries, paramValues["registries-insecure"])
 			}
 			if len(tt.blockRegistries) > 0 {
-				assert.True(t, paramNames["registries-block"])
+				assert.Equal(t, tt.blockRegistries, paramValues["registries-block"])
 			}
 		})
 	}
