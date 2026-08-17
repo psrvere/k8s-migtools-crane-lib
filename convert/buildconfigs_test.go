@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	buildv1 "github.com/openshift/api/build/v1"
 	imagev1 "github.com/openshift/api/image/v1"
@@ -2386,6 +2387,62 @@ func TestProcessDockerStrategySquash(t *testing.T) {
 			if tt.expectedParams > 0 {
 				assert.Equal(t, tt.expectedName, build.Spec.ParamValues[0].Name)
 				assert.Equal(t, tt.expectedValue, *build.Spec.ParamValues[0].SingleValue.Value)
+			}
+		})
+	}
+}
+
+func TestProcessCompletionDeadline(t *testing.T) {
+	deadline := int64(1800)
+
+	tests := []struct {
+		name            string
+		buildConfig     buildv1.BuildConfig
+		expectedTimeout *metav1.Duration
+	}{
+		{
+			name: "completionDeadlineSeconds set maps to Build timeout",
+			buildConfig: buildv1.BuildConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bc",
+					Namespace: "default",
+				},
+				Spec: buildv1.BuildConfigSpec{
+					CommonSpec: buildv1.CommonSpec{
+						CompletionDeadlineSeconds: &deadline,
+					},
+				},
+			},
+			expectedTimeout: &metav1.Duration{Duration: 1800 * time.Second},
+		},
+		{
+			name: "completionDeadlineSeconds unset leaves timeout nil",
+			buildConfig: buildv1.BuildConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-bc",
+					Namespace: "default",
+				},
+				Spec: buildv1.BuildConfigSpec{},
+			},
+			expectedTimeout: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			co := &ConvertOptions{
+				Logger: logrus.New(),
+			}
+			build := &shipwrightv1beta1.Build{}
+
+			co.processCompletionDeadline(tt.buildConfig, build)
+
+			if tt.expectedTimeout == nil {
+				assert.Nil(t, build.Spec.Timeout)
+			} else {
+				if assert.NotNil(t, build.Spec.Timeout) {
+					assert.Equal(t, tt.expectedTimeout.Duration, build.Spec.Timeout.Duration)
+				}
 			}
 		})
 	}

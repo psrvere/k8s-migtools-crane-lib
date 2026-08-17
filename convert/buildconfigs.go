@@ -217,6 +217,7 @@ func (t *ConvertOptions) convertBuildConfigs() error {
 
 		t.processSource(bc, b)
 		t.processOutput(bc, b)
+		t.processCompletionDeadline(bc, b)
 		t.addRegistries(b)
 		t.writeBuild(b)
 	}
@@ -774,6 +775,21 @@ func (t *ConvertOptions) processOutput(bc buildv1.BuildConfig, b *shipwrightv1be
 	} else {
 		b.Spec.Output.Image = bc.Spec.Output.To.Name
 	}
+}
+
+// processCompletionDeadline maps BuildConfig completionDeadlineSeconds to the
+// Shipwright Build timeout so that migrated builds keep the same execution deadline
+func (t *ConvertOptions) processCompletionDeadline(bc buildv1.BuildConfig, b *shipwrightv1beta1.Build) {
+	if bc.Spec.CompletionDeadlineSeconds == nil {
+		return
+	}
+
+	timeout := metav1.Duration{
+		Duration: time.Duration(*bc.Spec.CompletionDeadlineSeconds) * time.Second,
+	}
+	b.Spec.Timeout = &timeout
+	t.Logger.Infof("Mapping completionDeadlineSeconds %ds to Build timeout %s for BuildConfig %s",
+		*bc.Spec.CompletionDeadlineSeconds, timeout.Duration, bc.Name)
 }
 
 func (t *ConvertOptions) addRegistries(b *shipwrightv1beta1.Build) {
